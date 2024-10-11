@@ -4,5 +4,5 @@ namespace BlockchainStats.App.Export;
 
 public interface IStatsExporter
 {
-    Task ExportAsync(IEnumerable<BitcoinTransactionStats> stats);
+    Task ExportAsync(IAsyncEnumerable<BitcoinTransactionStats> stats, CancellationToken cancellationToken = default);
 }

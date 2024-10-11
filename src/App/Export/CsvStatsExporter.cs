@@ -7,7 +7,7 @@ namespace BlockchainStats.App.Export;
 
 public class CsvStatsExporter(ILogger<CsvStatsExporter> logger) : IStatsExporter
 {
-    public async Task ExportAsync(IEnumerable<BitcoinTransactionStats> stats)
+    public async Task ExportAsync(IAsyncEnumerable<BitcoinTransactionStats> stats, CancellationToken cancellationToken = default)
     {
         var exportFile = new FileInfo("stats.csv");
 
@@ -17,7 +17,7 @@ public class CsvStatsExporter(ILogger<CsvStatsExporter> logger) : IStatsExporter
         await using var csvWriter = new CsvWriter(exportFileWriter, CultureInfo.InvariantCulture);
         
         logger.LogInformation("Exporting to {FilePath}", exportFile.FullName);
-        await csvWriter.WriteRecordsAsync(stats);
+        await csvWriter.WriteRecordsAsync(stats, cancellationToken);
         logger.LogInformation("Exporting finished at {FilePath}", exportFile.FullName);
     }
 }

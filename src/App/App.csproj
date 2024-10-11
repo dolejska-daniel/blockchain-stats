@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <RootNamespace>BlockchainStats.App</RootNamespace>
-        <AssemblyName>BlockchainStats.App</AssemblyName>
 
         <OutputType>Exe</OutputType>
     </PropertyGroup>

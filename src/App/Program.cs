@@ -1,4 +1,5 @@
 ﻿using BlockchainStats.App.Export;
+using BlockchainStats.App.Extensions;
 using BlockchainStats.App.Logic;
 using BlockchainStats.App.Options;
 using Microsoft.Extensions.Configuration;
@@ -15,8 +16,8 @@ builder.Configuration.AddJsonFile($"appsettings{builder.Environment.EnvironmentN
 builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: false);
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.Configure<BitcoinClientOptions>(opts
-    => builder.Configuration.GetSection(BitcoinClientOptions.SectionName).Bind(opts));
+builder.ConfigureOptions<BitcoinClientOptions>()
+    .ConfigureOptions<BitcoinTransactionStatisticsOptions>();
 
 builder.Services.AddSingleton<IStatsExporter, CsvStatsExporter>();
 builder.Services.AddSingleton<RPCClient>(serviceProvider =>
