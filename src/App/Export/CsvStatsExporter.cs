@@ -7,9 +7,9 @@ namespace BlockchainStats.App.Export;
 
 public class CsvStatsExporter(ILogger<CsvStatsExporter> logger) : IStatsExporter
 {
-    public async Task ExportAsync(IAsyncEnumerable<BitcoinTransactionStats> stats, CancellationToken cancellationToken = default)
+    public async Task ExportAsync(ExportInfo info, IAsyncEnumerable<BitcoinTransactionStats> stats, CancellationToken cancellationToken = default)
     {
-        var exportFile = new FileInfo("stats.csv");
+        var exportFile = new FileInfo($"btc-tx-stats-{info.BlockHeightFrom}-{info.BlockHeightTo}.csv");
 
         logger.LogDebug("Creating export file {FilePath}", exportFile.FullName);
         await using var exportFileStream = exportFile.OpenWrite();

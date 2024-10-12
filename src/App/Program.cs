@@ -17,6 +17,7 @@ builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, relo
 builder.Configuration.AddEnvironmentVariables();
 
 builder.ConfigureOptions<BitcoinClientOptions>()
+    .ConfigureOptions<BlockchainTargetOptions>()
     .ConfigureOptions<BitcoinTransactionStatisticsOptions>();
 
 builder.Services.AddSingleton<IStatsExporter, CsvStatsExporter>();

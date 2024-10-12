@@ -10,7 +10,14 @@ public static class HostBuilderExtensions
     public static IHostApplicationBuilder ConfigureOptions<T>(this IHostApplicationBuilder hostBuilder)
         where T : class, IOptions
     {
-        hostBuilder.Services.Configure<T>(options => hostBuilder.Configuration.GetSection(options.SectionName).Bind(options));
+        hostBuilder.Services.Configure<T>(options => hostBuilder.Configuration
+            .GetSection(options.SectionName)
+            .Bind(options, binderOptions =>
+            {
+                binderOptions.BindNonPublicProperties = true;
+                binderOptions.ErrorOnUnknownConfiguration = true;
+            }));
+
         return hostBuilder;
     }
 }

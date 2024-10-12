@@ -1,4 +1,4 @@
-namespace BlockchainStats.App.Logic;
+namespace BlockchainStats.App.Models;
 
 public class DictionaryWithDefault<TKey, TValue>(TValue defaultValue) : Dictionary<TKey, TValue>
     where TKey : notnull

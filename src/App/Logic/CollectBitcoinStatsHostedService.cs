@@ -14,29 +14,36 @@ public class CollectBitcoinStatsHostedService(
     RPCClient client,
     IStatsExporter statsExporter,
     IHostApplicationLifetime applicationLifetime,
-    IOptions<BitcoinTransactionStatisticsOptions> options,
+    IOptions<BlockchainTargetOptions> targetOptions,
+    IOptions<BitcoinTransactionStatisticsOptions> processOptions,
     ILogger<CollectBitcoinStatsHostedService> logger
 ) : BackgroundService
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
-    private BitcoinTransactionStatisticsOptions Options => options.Value;
+    private BitcoinTransactionStatisticsOptions ProcessOptions => processOptions.Value;
+    private BlockchainTargetOptions TargetOptions => targetOptions.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         stoppingToken.Register(() => _cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(3)));
 
-        var transactionStats = GenerateTransactionStatsAsync();
-        await statsExporter.ExportAsync(transactionStats, stoppingToken);
-    }
-
-    private async IAsyncEnumerable<BitcoinTransactionStats> GenerateTransactionStatsAsync()
-    {
         var blockchainInfo = await client.GetBlockchainInfoAsync(CancellationToken);
         logger.LogInformation("Current best block height: {BlockHeight}", blockchainInfo.Blocks);
 
-        var fetchReferences = GetBlockHeightsFrom(blockchainInfo, Options.LastBlockCount)
+        var targetRange = TargetOptions.CreateRange(blockchainInfo);
+        var transactionStats = GenerateTransactionStatsAsync(targetRange);
+
+        var exportInfo = ExportInfo.Create(targetRange);
+        await statsExporter.ExportAsync(exportInfo, transactionStats, stoppingToken);
+    }
+
+    private async IAsyncEnumerable<BitcoinTransactionStats> GenerateTransactionStatsAsync(
+        BlockchainTargetOptions.BlockRange targetRange)
+    {
+        logger.LogDebug("Starting process for blocks: {BlockHeightFrom}-{BlockHeightTo}", targetRange.HeightFrom, targetRange.HeightTo);
+        var fetchReferences = GetBlockHeightsFrom(targetRange)
             .Select(StartBlockFetch);
 
         var blocksProcessed = 0u;
@@ -44,7 +51,7 @@ public class CollectBitcoinStatsHostedService(
         var runningReferences = new List<BlockFetchReference>();
         while (true)
         {
-            while (runningReferences.Count < Options.BlockBatchSize && fetchReferenceEnumerator.MoveNext())
+            while (runningReferences.Count < ProcessOptions.BlockBatchSize && fetchReferenceEnumerator.MoveNext())
             {
                 var blockFetchReference = fetchReferenceEnumerator.Current;
                 logger.LogDebug("Fetching block height: {BlockHeight}", blockFetchReference.BlockHeight);
@@ -68,8 +75,8 @@ public class CollectBitcoinStatsHostedService(
                     yield return transactionStatistic;
                 }
                 
-                var progressPercentage = 100.0 * ++blocksProcessed / Options.LastBlockCount;
-                logger.LogInformation("Current progress {BlocksProcessed}/{BlockCount} = {Progress:F1}%", blocksProcessed, Options.LastBlockCount, progressPercentage);
+                var progressPercentage = 100.0 * ++blocksProcessed / targetRange.BlockCount;
+                logger.LogInformation("Current progress {BlocksProcessed}/{BlockCount} = {Progress:F1}%", blocksProcessed, targetRange.BlockCount, progressPercentage);
             }
 
             runningReferences.RemoveAll(reference => completedReferences.Contains(reference));
@@ -95,9 +102,9 @@ public class CollectBitcoinStatsHostedService(
         return response.Block ?? throw new ApplicationException($"Block {blockHeight} ({blockHash}) could not be fetched.");
     }
 
-    private static IEnumerable<uint> GetBlockHeightsFrom(BlockchainInfo blockchainInfo, uint blockCount)
+    private static IEnumerable<uint> GetBlockHeightsFrom(BlockchainTargetOptions.BlockRange blockRange)
     {
-        for (var blockHeight = blockchainInfo.Blocks - blockCount; blockHeight < blockchainInfo.Blocks; blockHeight++)
+        for (var blockHeight = blockRange.HeightFrom; blockHeight < blockRange.HeightTo; blockHeight++)
         {
             yield return (uint) blockHeight;
         }
